@@ -2,7 +2,7 @@
 
 A cell segmentation and tracking service designed around Sartorius Incucyte-style live-cell imaging workflows. A PyTorch/Cellpose model is deployed behind a FastAPI HTTP service and consumed by a Windows desktop console written in C# / WPF. The project also mirrors Incucyte's file-drop integration pattern via a folder-watching daemon, and supports frame-by-frame cell tracking on time-lapse GIF input.
 
-Built as a portfolio project by [Preston Laney](https://github.com/PugstaLaney) to explore how research ML models get productionized onto scientific instruments. Informed by hands-on use of an Incucyte in a previous research lab.
+Built by [Preston Laney](https://github.com/PugstaLaney) to explore how research ML models get productionized onto scientific instruments. Informed by hands-on use of an Incucyte in a previous research lab.
 
 ---
 
