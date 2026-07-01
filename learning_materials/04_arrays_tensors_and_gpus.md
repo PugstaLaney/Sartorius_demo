@@ -105,7 +105,7 @@ But it *is* doing all those steps. It's why Cellpose "warms up" slowly on the fi
 
 The neural network's forward pass is dominated by **matrix multiplications**. A single convolution layer effectively multiplies large matrices together. A CPU has ~8-16 cores that each do one multiplication at a time. An RTX 3060 has 3,584 CUDA cores that all do multiplications *in parallel*.
 
-For image-sized matrices with millions of entries, the GPU wins by ~10-50x. On your machine, the notebook exercise `01_cellpose_basics.ipynb` measured Cellpose at:
+For image-sized matrices with millions of entries, the GPU wins by ~10-50x. On your machine, the notebook exercise `00_cellpose_basics.ipynb` measured Cellpose at:
 
 - GPU (RTX 3060): ~200-650 ms per image
 - CPU: ~3,000-6,000 ms per image
@@ -191,4 +191,4 @@ You'll physically feel the data hopping between RAM and VRAM, and see the shape/
 
 - Previous: [03_http_and_json_boundaries.md](03_http_and_json_boundaries.md)
 - Next: [05_layered_architecture.md](05_layered_architecture.md)
-- Also useful: the notebook [../notebooks/01_cellpose_basics.ipynb](../notebooks/01_cellpose_basics.ipynb) has hands-on tensor experiments.
+- Also useful: the notebook [00_cellpose_basics.ipynb](00_cellpose_basics.ipynb) has hands-on tensor experiments.

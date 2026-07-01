@@ -4,7 +4,7 @@ A curriculum of concept notes organized in reading order. Each doc is grounded i
 
 | # | File | What you'll leave with |
 |---|---|---|
-| 00 | [../notebooks/01_cellpose_basics.ipynb](../notebooks/01_cellpose_basics.ipynb) | What image segmentation is, PyTorch tensor basics, how to run Cellpose on one image, how to measure GPU vs CPU latency. Foundation for everything else. |
+| 00 | [00_cellpose_basics.ipynb](00_cellpose_basics.ipynb) | What image segmentation is, PyTorch tensor basics, how to run Cellpose on one image, how to measure GPU vs CPU latency. Foundation for everything else. |
 | 01 | [01_image_journey.md](01_image_journey.md) | Step-by-step trace of one image from disk → WPF → HTTP → Python → GPU → JSON → back to the WPF window. The concrete-first mental model. |
 | 02 | [02_classes_and_lifetime.md](02_classes_and_lifetime.md) | What a class actually is (recipe vs. instance), what `__init__` and `self` mean, what `@dataclass` gives you, where instances live in memory, and how FastAPI's lifespan hook creates the long-lived `SEGMENTER` singleton. |
 | 03 | [03_http_and_json_boundaries.md](03_http_and_json_boundaries.md) | HTTP as a text protocol, GET vs POST, status codes, JSON as the shared vocabulary across languages, why the WPF and backend can each be replaced without touching the other. |

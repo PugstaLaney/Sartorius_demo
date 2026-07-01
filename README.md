@@ -72,8 +72,16 @@ Sartorius_Cell_Segmentation/
 │   ├── synthetic_timelapse.py      Generate a controlled-drift time-lapse from one image
 │   └── process_timelapse.py        CLI version of the tracking pipeline
 │
-├── notebooks/
-│   └── 01_cellpose_basics.ipynb    Walkthrough: tensors → model → masks → metrics
+├── learning_materials/             Concept notes and the Cellpose basics notebook
+│   ├── 00_cellpose_basics.ipynb    Walkthrough: tensors → model → masks → metrics
+│   ├── 01_image_journey.md         Trace of one image through the whole system
+│   ├── 02_classes_and_lifetime.md  Classes, __init__, self, @dataclass, lifespan
+│   ├── 03_http_and_json_boundaries.md  HTTP, JSON, GET vs POST, decoupling
+│   ├── 04_arrays_tensors_and_gpus.md   numpy, tensors, GPU memory
+│   ├── 05_layered_architecture.md  Why the code is split by concern
+│   ├── 06_hungarian_tracking.md    Hungarian algorithm, bipartite matching
+│   ├── 07_async_and_concurrency.md async, GIL, scaling patterns
+│   └── README.md                   Reading order and how to use these
 │
 ├── data/                           Sample images, drop folders, generated time-lapses
 ├── docs/
@@ -290,7 +298,7 @@ You can also drag a GIF straight into the WPF console. The service processes all
 
 For a new reader (including future-you) trying to understand the code:
 
-1. **`notebooks/01_cellpose_basics.ipynb`** — teaching artifact. Tensors, U-Net, what Cellpose actually does. The foundation for everything else.
+1. **`learning_materials/00_cellpose_basics.ipynb`** — teaching artifact. Tensors, U-Net, what Cellpose actually does. The foundation for everything else. See `learning_materials/README.md` for the full reading order.
 2. **`backend/inference.py`** — 80 lines. Model wrapper. Smallest and most self-contained piece.
 3. **`backend/morphology.py`** — 80 lines. Pure math on masks. No framework noise.
 4. **`backend/main.py`** — 250 lines. FastAPI service. Shows how the model wrapper becomes an HTTP service.
