@@ -13,7 +13,7 @@ __pycache__/
 [Bb]in/
 [Oo]bj/
 
-# Visual Studio state (in case Preston ever opens the project there)
+# Visual Studio state (kept out in case anyone ever opens the project there)
 .vs/
 *.user
 *.suo
