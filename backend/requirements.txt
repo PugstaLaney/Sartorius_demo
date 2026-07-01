@@ -1,0 +1,15 @@
+# Pinned to versions known to work on Windows + CUDA 12.4 + RTX 3060.
+# torch is installed separately via the PyTorch index to get the CUDA build.
+# See README for install steps.
+
+cellpose==3.0.10
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.9
+pillow==10.4.0
+numpy==1.26.4
+opencv-python==4.10.0.84
+matplotlib==3.9.2
+scikit-image==0.24.0
+pandas==2.2.3
+ipykernel==6.29.5

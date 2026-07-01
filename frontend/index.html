@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cell Segmentation Demo</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Cell Segmentation Service</h1>
+    <p class="subtitle">PyTorch + Cellpose, served via FastAPI</p>
+  </header>
+
+  <main>
+    <section class="controls">
+      <label class="file-input">
+        <input type="file" id="fileInput" accept="image/*" />
+        <span>Upload microscopy image</span>
+      </label>
+      <button id="runBtn" disabled>Run segmentation</button>
+    </section>
+
+    <section class="status" id="status">
+      <span class="badge" id="deviceBadge">device: unknown</span>
+      <span class="metric" id="latencyMetric">latency: —</span>
+      <span class="metric" id="countMetric">cells: —</span>
+    </section>
+
+    <section class="viewer">
+      <div class="image-wrap">
+        <h2>Original</h2>
+        <canvas id="originalCanvas"></canvas>
+      </div>
+      <div class="image-wrap">
+        <h2>Segmented</h2>
+        <canvas id="overlayCanvas"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

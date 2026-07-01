@@ -1,0 +1,109 @@
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --ok: #3fb950;
+  --err: #f85149;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  line-height: 1.5;
+}
+
+header {
+  padding: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 { margin: 0; font-size: 1.5rem; }
+.subtitle { margin: 0.25rem 0 0; color: var(--muted); font-size: 0.9rem; }
+
+main {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+
+.file-input {
+  display: inline-block;
+  padding: 0.6rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.file-input input { display: none; }
+
+button {
+  padding: 0.6rem 1.25rem;
+  background: var(--accent);
+  color: #0d1117;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.status {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.badge, .metric {
+  padding: 0.3rem 0.7rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-family: ui-monospace, "Cascadia Code", monospace;
+}
+.badge.ok { border-color: var(--ok); color: var(--ok); }
+.badge.err { border-color: var(--err); color: var(--err); }
+
+.viewer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.image-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+.image-wrap h2 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: var(--muted);
+  font-weight: 500;
+}
+canvas {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+}
+
+@media (max-width: 800px) {
+  .viewer { grid-template-columns: 1fr; }
+}
