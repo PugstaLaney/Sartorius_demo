@@ -25,22 +25,35 @@ Why not learned features (re-id embeddings):
 
 Reference: linear_sum_assignment from scipy.optimize implements Jonker-Volgenant
 (an O(n^3) variant of Hungarian).
+
+See learning_materials/06_hungarian_tracking.md for a full walkthrough.
 """
 
 from __future__ import annotations
+
+
+# =============================================================================
+# IMPORTS
+# =============================================================================
 
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
-from scipy.optimize import linear_sum_assignment
-
+from scipy.optimize import linear_sum_assignment    # THE Hungarian solver
 
 # A "cell observation" here is the per-cell dict produced by morphology.py.
 # We only require centroid_x, centroid_y, and area_px. Anything else passes
-# through untouched.
+# through untouched. Using a type alias makes the function signatures cleaner.
 Cell = dict[str, Any]
 
+
+# =============================================================================
+# COST MATRIX CONSTRUCTION
+# =============================================================================
+# The Hungarian algorithm needs a matrix where cost[i, j] tells it "how bad
+# would it be to match prev-cell i with current-cell j?" This function
+# builds that matrix.
 
 def _cost_matrix(
     prev_cells: list[Cell],
@@ -58,23 +71,37 @@ def _cost_matrix(
     still have +inf cost — those are "no link" pairs.
     """
     n_prev, n_curr = len(prev_cells), len(curr_cells)
+
+    # Start with +inf everywhere. Any pair we can't (or won't) match stays
+    # at +inf and gets rejected later.
     cost = np.full((n_prev, n_curr), np.inf, dtype=np.float64)
 
+    # Pull out the relevant columns as numpy arrays. Doing the math in numpy
+    # (vectorized) is drastically faster than a Python loop over cell pairs.
     prev_xy = np.array([(c["centroid_x"], c["centroid_y"]) for c in prev_cells])
     curr_xy = np.array([(c["centroid_x"], c["centroid_y"]) for c in curr_cells])
     prev_area = np.array([c["area_px"] for c in prev_cells], dtype=np.float64)
     curr_area = np.array([c["area_px"] for c in curr_cells], dtype=np.float64)
 
-    # Pairwise distance matrix (vectorized — much faster than Python loops).
+    # Compute the pairwise distance matrix all at once using broadcasting.
+    # prev_xy[:, 0, None] has shape (n_prev, 1). curr_xy[None, :, 0] has
+    # shape (1, n_curr). Subtracting them broadcasts to (n_prev, n_curr).
     dx = prev_xy[:, 0, None] - curr_xy[None, :, 0]
     dy = prev_xy[:, 1, None] - curr_xy[None, :, 1]
-    dist = np.sqrt(dx * dx + dy * dy)
+    dist = np.sqrt(dx * dx + dy * dy)                     # euclidean distance
     area_diff = np.abs(prev_area[:, None] - curr_area[None, :])
 
+    # Only fill in cost for pairs within reach. Everyone else stays at +inf.
     within_range = dist <= max_distance
     cost[within_range] = dist[within_range] + area_weight * area_diff[within_range]
     return cost
 
+
+# =============================================================================
+# FRAME-TO-FRAME LINKING
+# =============================================================================
+# Takes two lists of cells (prev frame, current frame) and figures out which
+# pairs correspond to the same physical cell.
 
 def link_frames(
     prev_cells: list[Cell],
@@ -90,30 +117,45 @@ def link_frames(
         lost_prev - indices into prev_cells that did not match anything
                     (their tracks are lost / cell left the frame)
     """
+    # Edge case: one side has no cells. Nothing to match.
     if not prev_cells or not curr_cells:
         return [], list(range(len(curr_cells))), list(range(len(prev_cells)))
 
+    # Build the cost matrix using the helper above.
     cost = _cost_matrix(prev_cells, curr_cells, max_distance, area_weight)
 
     # linear_sum_assignment cannot handle +inf, so replace with a "large but
     # finite" sentinel that's still way bigger than any legitimate cost.
+    # This is a common pattern with the Hungarian algorithm.
     BIG = 1e9
     safe_cost = np.where(np.isinf(cost), BIG, cost)
     row_ind, col_ind = linear_sum_assignment(safe_cost)
 
+    # After the solver returns, filter out any "matches" that were actually
+    # forced to pick a +inf pair (i.e., no valid match existed for that row
+    # or column). These count as "unmatched," not as real links.
     matched: list[tuple[int, int]] = []
     matched_prev: set[int] = set()
     matched_curr: set[int] = set()
     for r, c in zip(row_ind, col_ind):
-        if cost[r, c] < np.inf:  # only keep pairs that were actually in range
+        if cost[r, c] < np.inf:                    # was actually within range
             matched.append((int(r), int(c)))
             matched_prev.add(int(r))
             matched_curr.add(int(c))
 
+    # Anything in the current frame that didn't get matched is a "new track."
+    # Anything in the previous frame that didn't get matched is a "lost track."
     new_curr = [j for j in range(len(curr_cells)) if j not in matched_curr]
     lost_prev = [i for i in range(len(prev_cells)) if i not in matched_prev]
     return matched, new_curr, lost_prev
 
+
+# =============================================================================
+# DATA CONTAINERS FOR TRACK STATE
+# =============================================================================
+# TrackPoint = one observation of a cell in one frame.
+# Track     = the ordered list of observations for a single cell over time.
+# Both use @dataclass to avoid boilerplate.
 
 @dataclass
 class TrackPoint:
@@ -128,9 +170,13 @@ class TrackPoint:
 class Track:
     """A single cell observed across multiple frames."""
     track_id: int
+    # `field(default_factory=list)` is required for mutable defaults on
+    # dataclasses. Without it, all instances would share the same list
+    # (a classic Python footgun).
     points: list[TrackPoint] = field(default_factory=list)
 
     def to_dict(self) -> dict:
+        """Serialize this track for the JSON response."""
         return {
             "track_id": self.track_id,
             "first_frame": self.points[0].frame if self.points else None,
@@ -142,6 +188,13 @@ class Track:
             ],
         }
 
+
+# =============================================================================
+# THE STATEFUL TRACKER
+# =============================================================================
+# `Tracker` is a stateful worker that carries "state from the previous frame"
+# between calls. Same pattern as CellSegmenter: expensive-to-construct state
+# lives on the instance; cheap methods reuse it.
 
 class Tracker:
     """
@@ -157,15 +210,36 @@ class Tracker:
         tracks_json = tr.dump()
     """
 
+    # -------------------------------------------------------------------------
+    # SUBSECTION: __init__ — set up the tracker's initial state
+    # -------------------------------------------------------------------------
     def __init__(self, max_distance: float = 30.0, area_weight: float = 0.01):
+        # Cost function parameters. Higher max_distance = more permissive
+        # matching (cells can move further between frames). Higher area_weight
+        # = area mismatches matter more relative to position mismatches.
         self.max_distance = max_distance
         self.area_weight = area_weight
+
+        # State we carry between calls:
+        # - _next_track_id      : monotonic counter for issuing fresh track IDs
+        # - _prev_frame_assignments : track_id per cell in the previous frame,
+        #                              in the same order as _prev_frame_cells
+        # - _prev_frame_cells   : the previous frame's cell list (for linking)
+        # - tracks              : dict of track_id -> Track (grows across frames)
+        #
+        # The leading underscore on `_prev_frame_*` is a convention meaning
+        # "internal — don't touch from outside the class." `tracks` has no
+        # underscore because we DO want callers to read it (via .dump()).
         self._next_track_id = 1
-        self._prev_frame_assignments: list[int] = []  # track_id per cell in prev frame
+        self._prev_frame_assignments: list[int] = []
         self._prev_frame_cells: list[Cell] = []
         self.tracks: dict[int, Track] = {}
 
+    # -------------------------------------------------------------------------
+    # SUBSECTION: private helpers for track bookkeeping
+    # -------------------------------------------------------------------------
     def _new_track(self, frame: int, cell: Cell) -> int:
+        """Allocate a fresh track ID for a cell we've never seen before."""
         tid = self._next_track_id
         self._next_track_id += 1
         self.tracks[tid] = Track(track_id=tid, points=[
@@ -179,6 +253,7 @@ class Tracker:
         return tid
 
     def _extend_track(self, tid: int, frame: int, cell: Cell) -> None:
+        """Add a new observation to an existing track."""
         self.tracks[tid].points.append(TrackPoint(
             frame=frame,
             centroid_x=float(cell["centroid_x"]),
@@ -186,18 +261,23 @@ class Tracker:
             area_px=int(cell["area_px"]),
         ))
 
+    # -------------------------------------------------------------------------
+    # SUBSECTION: update() — the public entry point, called once per frame
+    # -------------------------------------------------------------------------
     def update(self, frame_index: int, cells: list[Cell]) -> list[int]:
         """
         Assign every cell in this frame to either an existing track or a new
         one. Returns one track_id per input cell, in the same order.
         """
-        # First frame: every cell becomes a new track.
+        # First frame: no previous frame to link against, so every cell
+        # becomes a brand-new track. Store this frame's state and return.
         if not self._prev_frame_cells:
             assignments = [self._new_track(frame_index, c) for c in cells]
             self._prev_frame_assignments = assignments
             self._prev_frame_cells = cells
             return assignments
 
+        # Subsequent frames: link against the previous frame using Hungarian.
         matched, new_curr, _lost = link_frames(
             self._prev_frame_cells,
             cells,
@@ -205,25 +285,40 @@ class Tracker:
             area_weight=self.area_weight,
         )
 
+        # `assignments[k]` will hold the track ID we chose for cells[k].
+        # We start with None and fill in below.
         assignments: list[int | None] = [None] * len(cells)
+
+        # For each matched pair: this current-frame cell continues the track
+        # that the matched previous-frame cell belonged to.
         for prev_idx, curr_idx in matched:
             tid = self._prev_frame_assignments[prev_idx]
             self._extend_track(tid, frame_index, cells[curr_idx])
             assignments[curr_idx] = tid
 
+        # Unmatched current-frame cells are new — issue fresh track IDs.
         for curr_idx in new_curr:
             assignments[curr_idx] = self._new_track(frame_index, cells[curr_idx])
 
-        # Tracks belonging to lost_prev cells are simply not extended this frame.
-        # They may resume later if a cell reappears within max_distance — but our
-        # simple tracker treats reappearance as a new track. A real tracker would
-        # bridge short gaps; that's a future improvement.
+        # NOTE ON LOST TRACKS:
+        # Tracks belonging to lost_prev cells are simply not extended this
+        # frame. They may resume later if a cell reappears within max_distance,
+        # but our simple tracker treats reappearance as a new track. A real
+        # tracker (like DeepSORT) would bridge short gaps by keeping a "recently
+        # lost" pool and trying to re-match against it for a few frames. That's
+        # a future improvement — see 06_hungarian_tracking.md for context.
 
+        # Squash out any Nones (there shouldn't be any at this point; every
+        # slot was filled either by a match or by a new track) and store as
+        # the previous-frame state for the next call.
         final: list[int] = [a for a in assignments if a is not None]
         self._prev_frame_assignments = final
         self._prev_frame_cells = cells
         return final
 
+    # -------------------------------------------------------------------------
+    # SUBSECTION: dump() — serialize tracks for JSON output
+    # -------------------------------------------------------------------------
     def dump(self) -> dict:
         """Return the full set of tracks as a JSON-serializable dict."""
         return {
