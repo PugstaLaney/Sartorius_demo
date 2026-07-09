@@ -1,12 +1,26 @@
 """
-Shared overlay rendering for time-lapse pipelines.
+Render segmented cells over the original frame using track-derived colors
+and motion trails. Produces the annotated overlays shown in the WPF panel.
+
+Role in the architecture
+------------------------
+Layer:       Leaf rendering module (no other backend module imports from this one)
+Called by:   main.py (inside /track_timelapse), dev_scripts/process_timelapse.py
+Depends on:  numpy, PIL (external only)
+Runs when:   Once per frame during time-lapse processing, after segmentation
+             and tracking have completed for that frame
+
+Shared code so main.py's HTTP endpoint and dev_scripts/process_timelapse.py's
+CLI orchestrator draw identical overlays. This module knows nothing about
+segmentation, tracking algorithms, or JSON. It takes a base image, a mask,
+track IDs, and history, and returns an annotated PIL image.
 
 Both `dev_scripts/process_timelapse.py` (CLI, file output) and `main.py`
-(HTTP, JSON output) need to draw the same overlay images — cells colored
+(HTTP, JSON output) need to draw the same overlay images. Cells are colored
 by track ID plus trailing motion lines per track. Putting the shared code
 here keeps them consistent.
 
-See learning_materials/05_layered_architecture.md — this module is a good
+See learning_materials/05_layered_architecture.md. This module is a good
 example of "extract shared code into a leaf module when two orchestrators
 would otherwise duplicate it."
 """

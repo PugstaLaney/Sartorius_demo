@@ -1,5 +1,18 @@
 """
-Folder watcher — the file-drop ingestion path.
+Folder-drop ingestion daemon. The second entry point into the service,
+alongside main.py's HTTP endpoints.
+
+Role in the architecture
+------------------------
+Layer:       Orchestrator + standalone entry point
+Imported by: Nothing. This script is run directly via `py watcher.py`.
+Depends on:  inference, morphology, incucyte_filename
+Runs when:   Continuously in a poll loop, until Ctrl+C
+
+Reuses the same CellSegmenter that main.py uses. The model is loaded once
+at startup, then reused across every file processed. That is the same
+"load-once, reuse-many" pattern that makes the HTTP service fast. Folder-drop
+is just a different orchestration wrapping the same model.
 
 WHY THIS EXISTS
 ---------------
@@ -21,7 +34,7 @@ This script can run standalone:
 It loads the segmentation model once at startup (same lifecycle pattern as
 the FastAPI service in main.py), then loops forever.
 
-See learning_materials/05_layered_architecture.md — this is a second
+See learning_materials/05_layered_architecture.md. This is a second
 orchestrator alongside main.py, sharing the same leaf modules.
 """
 

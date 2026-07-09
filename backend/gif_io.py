@@ -1,5 +1,18 @@
 """
-GIF -> list of PNG bytes (and back, when we need to produce a result GIF).
+Decode animated GIFs into per-frame image bytes, and (optionally) re-encode
+a list of frames back into a single GIF.
+
+Role in the architecture
+------------------------
+Layer:       Leaf utility (no other backend module imports from this one)
+Called by:   main.py (inside the /track_timelapse endpoint)
+Depends on:  PIL (external only)
+Runs when:   Per HTTP request, once at the start of /track_timelapse
+
+Why this file exists as its own module: the animated-GIF -> flat-PNG-per-frame
+step is a self-contained format conversion. Isolating it lets main.py's
+tracking endpoint focus on orchestration (segment + track + render) without
+carrying GIF-decoding logic inline.
 
 Animated GIFs are how the WPF console sends multi-frame inputs to the backend.
 We extract each frame as a PNG so the rest of the pipeline can treat them

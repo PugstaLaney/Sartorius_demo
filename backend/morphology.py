@@ -1,7 +1,22 @@
 """
-Per-cell morphology extraction from an instance segmentation mask.
+Per-cell measurements: given a labeled instance mask, return morphology
+stats (area, perimeter, eccentricity, solidity, centroid) per cell, plus
+an aggregate summary.
 
-This is the "real-time insights" piece — once we have a mask with each cell
+Role in the architecture
+------------------------
+Layer:       Leaf utility (no other backend module imports from this one)
+Called by:   main.py (both /segment and /track_timelapse), watcher.py
+Depends on:  numpy, scikit-image (external only)
+Runs when:   Per request, immediately after segmentation completes and
+             before the JSON response is built
+
+This module is pure math on numpy arrays. It doesn't know about HTTP, doesn't
+know about the segmentation model, doesn't know how its output will be used.
+You could import per_cell_stats in a Jupyter notebook, pass it any integer
+mask (real, synthetic, hand-drawn), and it would work identically.
+
+This is the "real-time insights" piece. Once we have a mask with each cell
 labeled by a unique integer ID, downstream measurements are just bookkeeping.
 We delegate the geometric heavy lifting to scikit-image's regionprops_table,
 which is the standard tool for this in biological image analysis.

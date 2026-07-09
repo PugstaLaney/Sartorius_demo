@@ -1,11 +1,24 @@
 """
-FastAPI inference service.
+FastAPI application: the HTTP entry point for the segmentation service.
 
-Responsibilities:
-  - Accept image uploads
-  - Hand them to the model wrapper
-  - Return a JSON response with the mask (PNG-encoded) and metrics
-  - Expose health + metrics endpoints for observability
+Role in the architecture
+------------------------
+Layer:       Orchestrator + HTTP entry point (top of the local import graph)
+Imported by: uvicorn (the ASGI server that runs the service)
+Depends on:  inference, morphology, tracker, gif_io, track_visualization
+Runs when:   Once at startup (creates the SEGMENTER singleton via the
+             lifespan hook), then per-request thereafter for each endpoint
+
+This file composes the leaf modules into HTTP endpoints. It does NOT contain
+any inference math, tracking algorithm, or image processing of its own. It
+marshals bytes in from HTTP, calls the right leaf modules in the right order,
+and marshals JSON back out.
+
+Endpoints:
+  GET  /health           liveness probe
+  GET  /metrics          rolling-window latency stats
+  POST /segment          single-image inference (used by the WPF single-image path)
+  POST /track_timelapse  multi-frame inference + Hungarian tracking (GIF input)
 
 This file deliberately knows nothing about PyTorch or Cellpose internals.
 That separation is what makes the model swappable.

@@ -1,11 +1,21 @@
 """
-Cellpose model wrapper.
+Cellpose model wrapper: loads the model once at startup, exposes .segment()
+to run inference on a single image.
 
-This file exists to isolate the model lifecycle from the web framework.
-main.py knows nothing about PyTorch; it just calls CellSegmenter.segment().
-That separation is the whole point of a deployment-engineering codebase:
-the model can be swapped (different architecture, different weights, even a
-different framework) without touching the API surface.
+Role in the architecture
+------------------------
+Layer:       Leaf model wrapper (no other backend module imports from this one)
+Called by:   main.py, watcher.py, and every dev_scripts entry point
+Depends on:  torch, cellpose, numpy, PIL (external only)
+Runs when:   __init__() at process startup (slow, ~10s on first call)
+             .segment() once per HTTP request or once per dropped file (~650ms)
+
+This file is deliberately the ONLY place in the backend that knows about
+PyTorch or Cellpose. Everything above it (main.py, watcher.py, dev scripts)
+treats CellSegmenter as a black box with two operations: create an instance,
+then call .segment(bytes). That isolation is what makes the model swappable.
+Replacing Cellpose with detectron2 or a custom U-Net would change only this
+file, with no updates to the endpoints or the desktop client.
 
 See learning_materials/02_classes_and_lifetime.md for what the class + init
 pattern is doing under the hood, and 04_arrays_tensors_and_gpus.md for how

@@ -1,5 +1,17 @@
 """
-Cell tracker — link instance-segmentation results across time.
+Frame-to-frame cell tracker using Hungarian (Kuhn-Munkres) assignment.
+
+Role in the architecture
+------------------------
+Layer:       Leaf algorithm module (no other backend module imports from this one)
+Called by:   main.py (inside /track_timelapse), dev_scripts/process_timelapse.py
+Depends on:  numpy, scipy.optimize (external only)
+Runs when:   Stateful. One Tracker instance is created per time-lapse request,
+             and .update() is called once per frame in that request.
+
+This module knows nothing about images, models, or HTTP. It operates only on
+lists of dicts describing cells (centroid_x, centroid_y, area_px). You could
+feed it hand-fabricated cells in a REPL and watch tracks form.
 
 Problem: We segment each frame independently. The segmenter has no memory,
 so it assigns cell ID 1..N fresh in each frame. ID 5 in frame 0 has no
@@ -15,7 +27,7 @@ changed. The Hungarian solver finds the globally optimal assignment.
 Why Hungarian and not greedy nearest-neighbor:
     - Greedy can produce conflicts (cell A and cell B both pick cell X)
     - Hungarian guarantees each cell is matched at most once globally
-    - It's the same algorithm TrackMate uses for its simple tracker
+    - It is the same algorithm TrackMate uses for its simple tracker
 
 Why not learned features (re-id embeddings):
     - Honest scope: a deep tracker is a separate research project

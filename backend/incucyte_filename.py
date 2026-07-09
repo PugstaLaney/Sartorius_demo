@@ -1,5 +1,17 @@
 """
-Parser for Incucyte's exported TIFF filename convention.
+Parser for the Incucyte-exported TIFF filename convention.
+
+Role in the architecture
+------------------------
+Layer:       Leaf utility (no other backend module imports from this one)
+Called by:   watcher.py (parses each filename as files appear in incoming/)
+Depends on:  stdlib re, pathlib (nothing external)
+Runs when:   Once per file processed by the folder watcher
+
+This module is pure string parsing. It doesn't open the file, doesn't touch
+the segmenter, doesn't call HTTP. It exists so watcher.py can enrich each
+sidecar JSON with structured metadata (cell type, well, timestamp, etc.)
+parsed from the filename, without having to inline a big regex.
 
 Format observed in the LIVECell dataset (which was captured on Incucyte HD):
     <CellType>_<Modality>_<Well>_<Location>_<Timestamp>_<Crop>.tif
@@ -14,7 +26,7 @@ Example:
       |    imaging modality (Phase, Fluor, etc.)
       cell type / sample name
 
-We intentionally parse leniently — Incucyte filename conventions have varied
+We intentionally parse leniently. Incucyte filename conventions have varied
 across software versions, so we return None instead of throwing when the
 pattern does not match. Callers can treat None as "unknown source" and fall
 back to processing the file with empty metadata.
